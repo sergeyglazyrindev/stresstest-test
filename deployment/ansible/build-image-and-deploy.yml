@@ -1,0 +1,22 @@
+---
+- hosts: 127.0.0.1
+  vars_files:
+    - vars/{{ env }}/app.yml
+    - vars/{{ env }}/{{ service }}/performance_parameters.yml
+  vars:
+    initialize_mode: no
+    force_image_rebuild: no
+    force_redeploy: no
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ my_access_key }}"
+    AWS_ACCESS_KEY: "{{ my_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ my_secret_key }}"
+    AWS_REGION: "{{ my_region }}"
+  roles:
+    - refresh-aws-token
+    - create-workenvironment
+    - {"role": "configure-{{ service }}-workenvironment"}
+    - {"role": "build-image", when: service_with_git_repository and service_require_imagebuilding}
+    - {"role": "build-image-withoutrepo", when: not service_with_git_repository and service_require_imagebuilding}
+    - {"role": "{{ service }}-service-deploy", when: redeploy_service or force_redeploy or not service_require_imagebuilding}
+    - delete-workenvironment

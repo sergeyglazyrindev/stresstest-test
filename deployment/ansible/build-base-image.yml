@@ -1,0 +1,18 @@
+---
+- hosts: 127.0.0.1
+  vars_files:
+    - vars/{{ env }}/app.yml
+    - vars/{{ env }}/{{ service }}/performance_parameters.yml
+  vars:
+    initialize_mode: yes
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ my_access_key }}"
+    AWS_ACCESS_KEY: "{{ my_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ my_secret_key }}"
+    AWS_REGION: "{{ my_region }}"
+  roles:
+    - refresh-aws-token
+    - create-workenvironment
+    - {"role": "configure-{{ service }}-workenvironment"}
+    - build-image
+    - delete-workenvironment

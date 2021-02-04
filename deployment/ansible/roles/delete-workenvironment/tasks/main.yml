@@ -1,0 +1,3 @@
+---
+- name: Remove work environment
+  shell: "rm -rf {{ workdir_environment }}"

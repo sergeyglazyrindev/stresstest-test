@@ -1,0 +1,12 @@
+- name: Build docker image
+  shell: "cd {{ workdir_environment}}/build && docker build --rm --no-cache --build-arg STAGE={{ service_env }} -t {{service}} ."
+
+- name: Tag image
+  shell: "docker tag {{service}} 255818414577.dkr.ecr.us-east-1.amazonaws.com/build{{service}}:latest"
+
+- name: Push image
+  shell: "docker push 255818414577.dkr.ecr.us-east-1.amazonaws.com/build{{service}}:latest"
+
+- name: Set fact that image has been built
+  set_fact:
+    redeploy_service: false

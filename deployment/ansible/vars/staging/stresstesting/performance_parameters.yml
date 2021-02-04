@@ -1,0 +1,21 @@
+service_with_git_repository: false
+workerservice_total_memory_taskdefinition: 256
+workerservice_total_cpu_taskdefinition: 256
+service_networkmode_taskdefinition: host
+masterservice_total_memory_taskdefinition: 256
+masterservice_total_cpu_taskdefinition: 256
+service_subnets:
+  - subnet-24009442
+  - subnet-f640d2d7
+  - subnet-a4c51e95
+  - subnet-7acb5b25
+  - subnet-4334130e
+  - subnet-bc2a63b2
+service_tag_without_revision: stresstesting
+service_require_imagebuilding: true
+ami_id_instance: "ami-0f06fc190dd71269e"
+vpc_id: "vpc-ed1fbf90"
+service_env: "staging"
+master_service_security_groups:
+  - sg-003f477008ef3478d
+cluster_name: buildstresstesting-init

@@ -1,0 +1,46 @@
+---
+- name: Extract to variable latest commit hash
+  shell: "cd {{ workdir_environment }}/build/repo && echo 'init'"
+  register: commit_hash_output
+
+- name: Set container tag as fact
+  set_fact:
+    service_revision: "{{ commit_hash_output.stdout }}"
+  when: not initialize_mode
+
+- name: Set container tag as fact
+  set_fact:
+    container_tag: "{{ env }}-{{ commit_hash_output.stdout }}"
+  when: not initialize_mode
+
+- name: Set container tag as fact
+  set_fact:
+    container_tag: "init"
+  when: initialize_mode
+
+- name: Set container path as fact
+  set_fact:
+    container_path: "build{{ service }}:{{ container_tag }}"
+    cluster_name: "build{{ service }}-{{ container_tag }}"
+    cluster_service_name: "{{ service }}-{{ container_tag }}-service"
+
+- name: Check if such image exists in the registry
+  shell: "docker manifest inspect 255818414577.dkr.ecr.us-east-1.amazonaws.com/{{ container_path }}"
+  ignore_errors: yes
+  register: image_exists
+
+- name: Build docker image
+  shell: "cd {{ workdir_environment}}/build && docker build --rm --no-cache --build-arg STAGE={{ service_env }} -t {{ container_tag }} ."
+  when: image_exists.rc == 1 or force_image_rebuild
+
+- name: Tag image
+  shell: "docker tag {{ container_tag }} 255818414577.dkr.ecr.us-east-1.amazonaws.com/{{ container_path }}"
+  when: image_exists.rc == 1 or force_image_rebuild
+
+- name: Push image
+  shell: "docker push 255818414577.dkr.ecr.us-east-1.amazonaws.com/{{ container_path }}"
+  when: image_exists.rc == 1 or force_image_rebuild
+
+- name: Set fact that image has been built
+  set_fact:
+    redeploy_service: "{{ image_exists.rc or force_image_rebuild }}"

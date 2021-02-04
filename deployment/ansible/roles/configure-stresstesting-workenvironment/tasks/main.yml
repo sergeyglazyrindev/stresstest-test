@@ -1,0 +1,18 @@
+---
+- name: Turn on always initialize mode of deploying to deploy always container with the same tag
+  set_fact:
+    initialize_mode: "true"
+
+- name: Create directory for image essentials
+  file:
+    path: "{{ workdir_environment}}/build/docker/python"
+    state: directory
+    recurse: true
+
+- name: Copy dockerfile
+  copy:
+    src: Dockerfile
+    dest: "{{ workdir_environment}}/build/Dockerfile"
+
+- name: Copy repository to workdir_environment
+  shell: "cp -r /home2/Projects/Projects/Upwork/leonwainshtein/youtubeofleon/stresstesting {{ workdir_environment}}/build/repo"

@@ -1,0 +1,24 @@
+---
+- name: Generate random name of build
+  random_generator:
+    size: 40
+  register: buildid_res
+
+- name: Store buildid into fact
+  set_fact:
+    buildid: "{{ buildid_res.msg }}"
+
+- name: Create temporary file
+  tempfile:
+    state: directory
+    prefix: "buildproject-{{ buildid }}"
+    path: /tmp/
+  register: workdir_environment_res
+
+- name: Store workdir environment into fact
+  set_fact:
+    workdir_environment: "{{ workdir_environment_res.path }}"
+
+- name: Work environment is here
+  debug:
+    msg: "environment is here {{ workdir_environment }}"

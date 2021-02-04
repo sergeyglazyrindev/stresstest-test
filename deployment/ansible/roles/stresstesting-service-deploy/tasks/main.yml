@@ -1,0 +1,122 @@
+---
+- name: Create log group in cloud watch
+  community.aws.cloudwatchlogs_log_group:
+    log_group_name: "/deployment/stresstesting-worker"
+    state: present
+    retention: "5"
+
+- name: Create log group in cloud watch
+  community.aws.cloudwatchlogs_log_group:
+    log_group_name: "/deployment/stresstesting-master"
+    state: present
+    retention: "5"
+
+- name: Create task definition for worker
+  community.aws.ecs_taskdefinition:
+    family: "{{ service_tag_without_revision }}worker_{{ env }}"
+    launch_type: "EC2"
+    memory: "{{ workerservice_total_memory_taskdefinition }}"
+    cpu: "{{ workerservice_total_cpu_taskdefinition }}"
+    network_mode: "{{ service_networkmode_taskdefinition }}"
+    execution_role_arn: "arn:aws:iam::255818414577:role/ecsTaskExecutionRole"
+    state: present
+    containers:
+      - name: "worker"
+        cpu: "{{ workerservice_total_cpu_taskdefinition }}"
+        essential: true
+        image: "255818414577.dkr.ecr.us-east-1.amazonaws.com/buildstresstesting:latest"
+        memory: "{{ workerservice_total_memory_taskdefinition }}"
+        workingDirectory: /home/locust/app
+        entryPoint:
+          - locust
+          - "-f"
+          - locustfile_homepage.py
+          - "--worker"
+          - "--master-port=5557"
+          - "--master-host=172.31.91.153"
+        ulimits:
+          - softLimit: 10000
+            hardLimit: 10000
+            name: "nofile"
+        logConfiguration:
+          logDriver: awslogs
+          options:
+            awslogs-group: "/deployment/stresstesting-worker"
+            awslogs-stream-prefix: ecs
+            awslogs-region: "{{ my_region }}"
+  register: workertask_definition_api_created
+
+- name: Create task definition for master
+  community.aws.ecs_taskdefinition:
+    family: "{{ service_tag_without_revision }}master_{{ env }}"
+    launch_type: "EC2"
+    memory: "{{ masterservice_total_memory_taskdefinition }}"
+    cpu: "{{ masterservice_total_cpu_taskdefinition }}"
+    network_mode: "{{ service_networkmode_taskdefinition }}"
+    execution_role_arn: "arn:aws:iam::255818414577:role/ecsTaskExecutionRole"
+    state: present
+    containers:
+      - name: "master"
+        memory: "{{ masterservice_total_memory_taskdefinition }}"
+        cpu: "{{ masterservice_total_cpu_taskdefinition }}"
+        essential: true
+        image: "255818414577.dkr.ecr.us-east-1.amazonaws.com/buildstresstesting:init"
+        portMappings:
+          - containerPort: "5557"
+            protocol: "tcp"
+          - containerPort: "8089"
+            protocol: "tcp"
+        workingDirectory: /home/locust/app
+        ulimits:
+          - softLimit: 10000
+            hardLimit: 10000
+            name: "nofile"
+        entryPoint:
+          - locust
+          - "-f"
+          - locustfile_homepage.py
+          - "--master"
+          - "-u 30"
+        logConfiguration:
+          logDriver: awslogs
+          options:
+            awslogs-group: "/deployment/stresstesting-master"
+            awslogs-stream-prefix: ecs
+            awslogs-region: "{{ my_region }}"
+  register: master_task_definition_created
+
+- name: Create cluster for service
+  community.aws.ecs_cluster:
+    name: "{{ cluster_name }}"
+    state: present
+
+- name: Create master service for cluster
+  community.aws.ecs_service:
+    name: "stresstestingmaster"
+    cluster: "{{ cluster_name }}"
+    task_definition: "{{ service_tag_without_revision }}master_{{ env }}:{{ master_task_definition_created.taskdefinition.revision }}"
+    desired_count: "1"
+    launch_type: "EC2"
+    placement_constraints:
+      - type: memberOf
+        expression: 'attribute:forstresstesting==master'
+    scheduling_strategy: REPLICA
+    state: present
+
+- name: Set attributes
+  community.aws.ecs_attribute:
+    state: present
+    cluster: "{{ cluster_name }}"
+    ec2_instance_id: "i-08f06edd6e84d0f20"
+    attributes:
+      - forstresstesting: master
+
+- name: Create worker service for cluster
+  community.aws.ecs_service:
+    name: "stresstestingworker"
+    cluster: "{{ cluster_name }}"
+    task_definition: "{{ service_tag_without_revision }}worker_{{ env }}:{{ workertask_definition_api_created.taskdefinition.revision }}"
+    desired_count: "1"
+    launch_type: "EC2"
+    scheduling_strategy: REPLICA
+    state: present

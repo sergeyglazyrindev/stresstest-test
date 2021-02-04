@@ -1,0 +1,5 @@
+---
+workpath: "/leonstresstesting-deployment/staging"
+workpath_tmp: "{{ workpath }}/tmp"
+workpath_progress: "{{ workpath }}/progress"
+vpc_id: "vpc-ed1fbf90"
