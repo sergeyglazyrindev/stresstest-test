@@ -30,7 +30,7 @@
         entryPoint:
           - locust
           - "-f"
-          - locustfile_homepage.py
+          - "locustfile_{{ test_part }}.py"
           - "--worker"
           - "--master-port=5557"
           - "--master-host=172.31.91.153"
@@ -74,7 +74,7 @@
         entryPoint:
           - locust
           - "-f"
-          - locustfile_homepage.py
+          - "locustfile_{{ test_part }}.py"
           - "--master"
           - "-u 30"
         logConfiguration:
